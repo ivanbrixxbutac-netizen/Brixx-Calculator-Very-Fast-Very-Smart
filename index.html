@@ -1,0 +1,551 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<title>Brixx Smart Calculator</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#07111f; --panel:#101e30; --key:#1a2b41;
+  --text:#eef6ff; --muted:#91a8c2; --blue:#087cf0;
+  --border:#29415e; --display:#081522;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,Arial,sans-serif;
+  min-height:100vh;padding:18px 12px 32px;
+  transition:background .2s,color .2s
+}
+body.light{
+  color-scheme:light;--bg:#edf3fa;--panel:#fff;
+  --key:#e7edf5;--text:#122238;--muted:#61748a;
+  --border:#d0dce9;--display:#f5f9ff
+}
+.app{width:100%;max-width:540px;margin:auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+.brand{font-size:21px;font-weight:800;letter-spacing:-.5px}
+.brand span{color:#16b9ff}
+.sub{font-size:12px;color:var(--muted);margin-top:3px}
+button{
+  border:1px solid var(--border);background:var(--key);color:var(--text);
+  border-radius:12px;min-height:46px;padding:8px 4px;
+  font-size:15px;font-weight:650;cursor:pointer;
+  touch-action:manipulation;user-select:none;
+  transition:filter .12s,transform .12s
+}
+button:active{filter:brightness(1.25);transform:scale(.97)}
+button:focus-visible{outline:2px solid #22b9ff;outline-offset:2px}
+.iconbtn{min-height:40px;padding:8px 12px}
+.display{
+  background:var(--display);border:1px solid var(--border);
+  border-radius:17px;padding:16px;margin-bottom:12px;
+  box-shadow:0 0 20px #008cff12
+}
+.status{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.expression{
+  width:100%;border:0;outline:0;background:transparent;color:var(--muted);
+  font-size:19px;text-align:right;margin-top:15px;padding:4px 0
+}
+.result{
+  text-align:right;font-size:clamp(29px,8vw,43px);font-weight:750;
+  letter-spacing:-1px;overflow-wrap:anywhere;min-height:54px;
+  margin-top:4px
+}
+.message{font-size:12px;color:#ff8585;min-height:17px;text-align:right}
+.toolbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:9px}
+.memory{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:9px}
+.memory button{font-size:12px;min-height:38px}
+.science{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;margin-bottom:9px
+}
+.science button{font-size:13px;min-height:43px}
+.mainkeys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.mainkeys button{min-height:56px;font-size:21px}
+.op{color:#51c8ff}
+.danger{background:#5c1b2a;color:#ffbac5}
+.equal{background:var(--blue);color:white;border-color:var(--blue)}
+.zero{grid-column:span 2}
+.section-title{font-size:12px;color:var(--muted);margin:14px 0 8px}
+.history{background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:12px;margin-top:16px}
+.history-head{display:flex;align-items:center;justify-content:space-between}
+.history-head strong{font-size:14px}
+.history-list{display:grid;gap:8px;margin-top:10px}
+.history-item{
+  text-align:right;min-height:auto;padding:10px;background:var(--display);
+  font-weight:400;overflow-wrap:anywhere
+}
+.history-item small{display:block;color:var(--muted);margin-bottom:4px}
+.empty{font-size:13px;color:var(--muted);padding:8px 0}
+.footer{text-align:center;color:var(--muted);font-size:11px;margin-top:16px}
+@media(min-width:480px){
+ body{padding-top:28px}
+ .mainkeys button{min-height:60px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div>
+    <div class="brand">⚡ Brixx <span>Calculator</span></div>
+    <div class="sub">Very Smart • Very Fast</div>
+  </div>
+  <button class="iconbtn" data-action="theme" aria-label="Toggle theme">☀️</button>
+</header>
+
+<section class="display">
+  <div class="status">
+    <span id="angle">DEG</span>
+    <span id="memoryStatus">Memory: 0</span>
+    <span id="ansStatus">Ans: 0</span>
+  </div>
+  <input id="expression" class="expression" aria-label="Expression"
+    placeholder="Enter calculation..." autocomplete="off" spellcheck="false">
+  <div id="result" class="result" aria-live="polite">0</div>
+  <div id="message" class="message"></div>
+</section>
+
+<div class="toolbar">
+  <button class="danger" data-action="clear">AC</button>
+  <button data-action="back">⌫</button>
+  <button data-value="(">(</button>
+  <button data-value=")">)</button>
+</div>
+
+<div class="memory">
+  <button data-action="mc">MC</button>
+  <button data-action="mr">MR</button>
+  <button data-action="mplus">M+</button>
+  <button data-action="mminus">M−</button>
+  <button data-action="ms">MS</button>
+</div>
+
+<div class="section-title">SCIENTIFIC FUNCTIONS</div>
+<div class="science">
+  <button class="op" data-action="angle">DEG/RAD</button>
+  <button data-value="sin(">sin</button>
+  <button data-value="cos(">cos</button>
+  <button data-value="tan(">tan</button>
+  <button data-value="pi">π</button>
+
+  <button data-value="asin(">sin⁻¹</button>
+  <button data-value="acos(">cos⁻¹</button>
+  <button data-value="atan(">tan⁻¹</button>
+  <button data-value="e">e</button>
+  <button data-value="Ans">Ans</button>
+
+  <button data-value="sqrt(">√x</button>
+  <button data-value="cbrt(">∛x</button>
+  <button data-value="^2">x²</button>
+  <button data-value="^3">x³</button>
+  <button data-value="^">xʸ</button>
+
+  <button data-value="10^(">10ˣ</button>
+  <button data-value="exp(">eˣ</button>
+  <button data-value="ln(">ln</button>
+  <button data-value="log(">log</button>
+  <button data-value="log2(">log₂</button>
+
+  <button data-value="sinh(">sinh</button>
+  <button data-value="cosh(">cosh</button>
+  <button data-value="tanh(">tanh</button>
+  <button data-value="abs(">abs</button>
+  <button data-value="!">x!</button>
+
+  <button data-value="floor(">floor</button>
+  <button data-value="ceil(">ceil</button>
+  <button data-value="round(">round</button>
+  <button data-value="(">(</button>
+  <button data-value=")">)</button>
+</div>
+
+<div class="section-title">BASIC OPERATIONS</div>
+<div class="mainkeys">
+  <button data-action="sign">+/−</button>
+  <button data-value="%">%</button>
+  <button data-value="^(-1)">1/x</button>
+  <button class="op" data-value="÷">÷</button>
+
+  <button data-value="7">7</button>
+  <button data-value="8">8</button>
+  <button data-value="9">9</button>
+  <button class="op" data-value="×">×</button>
+
+  <button data-value="4">4</button>
+  <button data-value="5">5</button>
+  <button data-value="6">6</button>
+  <button class="op" data-value="−">−</button>
+
+  <button data-value="1">1</button>
+  <button data-value="2">2</button>
+  <button data-value="3">3</button>
+  <button class="op" data-value="+">+</button>
+
+  <button class="zero" data-value="0">0</button>
+  <button data-value=".">.</button>
+  <button class="equal" data-action="equals">=</button>
+</div>
+
+<div class="toolbar" style="margin-top:9px">
+  <button data-action="copy">Copy result</button>
+  <button data-action="percent">Result %</button>
+  <button data-action="square">Result²</button>
+  <button data-action="root">√ Result</button>
+</div>
+
+<section class="history">
+  <div class="history-head">
+    <strong>🕘 Calculation History</strong>
+    <button class="iconbtn" data-action="clearHistory">Clear</button>
+  </div>
+  <div id="history" class="history-list">
+    <div class="empty">Your calculations will appear here.</div>
+  </div>
+</section>
+<div class="footer">Brixx Smart Calculator • Runs directly in your browser</div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+const $ = id => document.getElementById(id);
+const input = $("expression");
+const output = $("result");
+const message = $("message");
+let ans = 0, memory = 0, angleMode = "DEG";
+let lastResult = 0, hasResult = false;
+let history = [];
+let justCalculated = false;
+
+function format(n) {
+  if (!Number.isFinite(n)) throw Error("Result is not finite.");
+  if (Object.is(n, -0)) n = 0;
+  if (Math.abs(n) < 1e-12) n = 0;
+  return Number(n.toPrecision(12)).toString();
+}
+
+function updateStatus() {
+  $("angle").textContent = angleMode;
+  $("memoryStatus").textContent = "Memory: " + format(memory);
+  $("ansStatus").textContent = "Ans: " + format(ans);
+}
+
+function showError(text) {
+  message.textContent = text;
+}
+
+function tokenize(source) {
+  source = source.replace(/π/g, "pi")
+    .replace(/×/g, "*").replace(/÷/g, "/")
+    .replace(/−/g, "-").replace(/√/g, "sqrt");
+
+  const tokens = [];
+  let i = 0;
+
+  while (i < source.length) {
+    if (/\s/.test(source[i])) { i++; continue; }
+
+    const rest = source.slice(i);
+    const number = rest.match(/^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/i);
+    const name = rest.match(/^[a-zA-Z]+/);
+    const op = source[i];
+
+    if (number) {
+      tokens.push({type:"number", value:Number(number[0])});
+      i += number[0].length;
+    } else if (name) {
+      tokens.push({type:"name", value:name[0].toLowerCase()});
+      i += name[0].length;
+    } else if ("+-*/^()%!".includes(op)) {
+      tokens.push({type:"op", value:op});
+      i++;
+    } else {
+      throw Error("Invalid character: " + op);
+    }
+    if (tokens.length > 300) throw Error("Expression too long.");
+  }
+  return tokens;
+}
+
+function calculate(source) {
+  const tokens = tokenize(source);
+  let p = 0;
+  const peek = () => tokens[p];
+  const take = () => tokens[p++];
+
+  function expression() {
+    let x = term();
+    while (peek() && ["+","-"].includes(peek().value)) {
+      const op = take().value, y = term();
+      x = op === "+" ? x + y : x - y;
+    }
+    return x;
+  }
+
+  function term() {
+    let x = unary();
+    while (peek() && ["*","/"].includes(peek().value)) {
+      const op = take().value, y = unary();
+      if (op === "/" && y === 0) throw Error("Cannot divide by zero.");
+      x = op === "*" ? x * y : x / y;
+    }
+    return x;
+  }
+
+  function unary() {
+    if (peek() && peek().value === "+") { take(); return unary(); }
+    if (peek() && peek().value === "-") { take(); return -unary(); }
+    return power();
+  }
+
+  function power() {
+    let x = postfix();
+    if (peek() && peek().value === "^") {
+      take();
+      x = Math.pow(x, unary());
+    }
+    return x;
+  }
+
+  function postfix() {
+    let x = primary();
+    while (peek() && ["!","%"].includes(peek().value)) {
+      const op = take().value;
+      if (op === "%") x /= 100;
+      if (op === "!") {
+        if (x < 0 || !Number.isInteger(x) || x > 170)
+          throw Error("Factorial needs an integer from 0 to 170.");
+        let f = 1;
+        for (let k=2; k<=x; k++) f *= k;
+        x = f;
+      }
+    }
+    return x;
+  }
+
+  function primary() {
+    const t = take();
+    if (!t) throw Error("Incomplete expression.");
+
+    if (t.type === "number") return t.value;
+
+    if (t.value === "(") {
+      const x = expression();
+      if (!peek() || take().value !== ")") throw Error("Missing closing parenthesis.");
+      return x;
+    }
+
+    if (t.type === "name") {
+      const name = t.value;
+      if (["pi","e","ans"].includes(name)) {
+        return name === "pi" ? Math.PI : name === "e" ? Math.E : ans;
+      }
+      if (!peek() || take().value !== "(")
+        throw Error("Use parentheses for functions, e.g. sin(30).");
+
+      const x = expression();
+      if (!peek() || take().value !== ")") throw Error("Missing closing parenthesis.");
+
+      const toRad = v => angleMode === "DEG" ? v * Math.PI / 180 : v;
+      const fromRad = v => angleMode === "DEG" ? v * 180 / Math.PI : v;
+      const funcs = {
+        sin: v => Math.sin(toRad(v)),
+        cos: v => Math.cos(toRad(v)),
+        tan: v => {
+          const r = toRad(v);
+          if (Math.abs(Math.cos(r)) < 1e-12) throw Error("Tangent is undefined here.");
+          return Math.tan(r);
+        },
+        asin: v => fromRad(Math.asin(v)),
+        acos: v => fromRad(Math.acos(v)),
+        atan: v => fromRad(Math.atan(v)),
+        sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
+        sqrt: v => {
+          if (v < 0) throw Error("Square root needs a non-negative number.");
+          return Math.sqrt(v);
+        },
+        cbrt: Math.cbrt,
+        abs: Math.abs,
+        ln: v => {
+          if (v <= 0) throw Error("ln requires a positive number.");
+          return Math.log(v);
+        },
+        log: v => {
+          if (v <= 0) throw Error("log requires a positive number.");
+          return Math.log10(v);
+        },
+        log2: v => {
+          if (v <= 0) throw Error("log2 requires a positive number.");
+          return Math.log2(v);
+        },
+        exp: Math.exp, floor: Math.floor,
+        ceil: Math.ceil, round: Math.round
+      };
+      if (!funcs[name]) throw Error("Unknown function: " + name);
+      return funcs[name](x);
+    }
+    throw Error("Unexpected symbol.");
+  }
+
+  if (!tokens.length) return 0;
+  const result = expression();
+  if (p !== tokens.length) throw Error("Check your expression.");
+  if (!Number.isFinite(result)) throw Error("Result is outside the supported range.");
+  return result;
+}
+
+function preview() {
+  message.textContent = "";
+  if (!input.value.trim()) {
+    output.textContent = "0";
+    return;
+  }
+  try {
+    output.textContent = format(calculate(input.value));
+  } catch (_) {
+    output.textContent = "…";
+  }
+}
+
+function append(value) {
+  if (justCalculated && /^[0-9.]$/.test(value)) input.value = "";
+  justCalculated = false;
+
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? start;
+  input.setRangeText(value, start, end, "end");
+  input.focus();
+  preview();
+}
+
+function currentValue() {
+  if (input.value.trim()) return calculate(input.value);
+  return lastResult;
+}
+
+function renderHistory() {
+  const el = $("history");
+  el.replaceChildren();
+  if (!history.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Your calculations will appear here.";
+    el.appendChild(empty);
+    return;
+  }
+
+  history.forEach(item => {
+    const b = document.createElement("button");
+    b.className = "history-item";
+    const small = document.createElement("small");
+    small.textContent = item.expression + " =";
+    const result = document.createElement("strong");
+    result.textContent = item.result;
+    b.append(small, result);
+    b.addEventListener("click", () => {
+      input.value = item.result;
+      preview();
+    });
+    el.appendChild(b);
+  });
+}
+
+function equals() {
+  try {
+    const expr = input.value.trim();
+    const result = expr ? calculate(expr) : lastResult;
+    lastResult = result;
+    ans = result;
+    hasResult = true;
+    output.textContent = format(result);
+    showError("");
+    if (expr) {
+      history.unshift({expression:expr, result:format(result)});
+      history = history.slice(0,30);
+      renderHistory();
+    }
+    updateStatus();
+    justCalculated = true;
+  } catch (e) {
+    showError(e.message || "Invalid calculation.");
+  }
+}
+
+function action(name) {
+  try {
+    switch (name) {
+      case "clear":
+        input.value = ""; output.textContent = "0";
+        showError(""); justCalculated = false; break;
+      case "back": {
+        const s = input.selectionStart ?? input.value.length;
+        const e = input.selectionEnd ?? s;
+        if (s !== e) input.setRangeText("", s, e, "end");
+        else if (s > 0) input.setRangeText("", s-1, s, "end");
+        preview(); break;
+      }
+      case "equals": equals(); break;
+      case "angle":
+        angleMode = angleMode === "DEG" ? "RAD" : "DEG";
+        updateStatus(); preview(); break;
+      case "sign":
+        if (input.value.trim()) input.value = "-(" + input.value + ")";
+        else input.value = "-";
+        preview(); break;
+      case "mc": memory = 0; updateStatus(); break;
+      case "mr": append(format(memory)); break;
+      case "mplus": memory += currentValue(); updateStatus(); break;
+      case "mminus": memory -= currentValue(); updateStatus(); break;
+      case "ms": memory = currentValue(); updateStatus(); break;
+      case "clearHistory": history = []; renderHistory(); break;
+      case "square": input.value = "(" + format(currentValue()) + ")^2"; preview(); equals(); break;
+      case "root": input.value = "sqrt(" + format(currentValue()) + ")"; preview(); equals(); break;
+      case "percent": input.value = "(" + format(currentValue()) + ")/100"; preview(); equals(); break;
+      case "copy":
+        navigator.clipboard.writeText(format(currentValue()))
+          .then(() => showError("Result copied."))
+          .catch(() => showError("Copy unavailable in this browser."));
+        break;
+      case "theme":
+        document.body.classList.toggle("light"); break;
+    }
+  } catch (e) {
+    showError(e.message || "Unable to complete operation.");
+  }
+}
+
+document.querySelectorAll("button").forEach(button => {
+  button.addEventListener("click", () => {
+    if (button.dataset.value !== undefined) {
+      append(button.dataset.value);
+    } else if (button.dataset.action) {
+      action(button.dataset.action);
+    }
+  });
+});
+
+input.addEventListener("input", () => {
+  justCalculated = false;
+  preview();
+});
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === "=") {
+    e.preventDefault(); equals();
+  } else if (e.key === "Escape") {
+    action("clear");
+  }
+});
+
+updateStatus();
+renderHistory();
+})();
+</script>
+</body>
+  </html>
+    
